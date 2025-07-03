@@ -6,12 +6,24 @@ from typing import List, Tuple
 
 class JapaneseLLMChat:
     def __init__(self):
-        # 利用可能な日本語LLMモデル
+        # 利用可能なLLMモデル（Inference API対応確認済み）
         self.models = {
+            # 日本語特化モデル（Inference API対応）
             "cyberagent/open-calm-7b": "CyberAgent Open CALM 7B",
             "rinna/japanese-gpt-neox-3.6b-instruction-sft": "Rinna GPT-NeoX 3.6B",
             "matsuo-lab/weblab-10b-instruction-sft": "Matsuo Lab WebLab 10B",
-            "stabilityai/japanese-stablelm-instruct-alpha-7b": "Japanese StableLM 7B"
+            "stabilityai/japanese-stablelm-instruct-alpha-7b": "Japanese StableLM 7B",
+            "tokyotech-llm/Swallow-7b-instruct-hf": "Swallow 7B Instruct (日本語対応)",
+            "elyza/ELYZA-japanese-Llama-2-7b-instruct": "ELYZA Japanese Llama 2 7B",
+            
+            # 多言語対応・英語モデル（13B以上、Inference API対応）
+            "microsoft/DialoGPT-large": "DialoGPT Large (対話特化)",
+            "bigscience/bloom-7b1": "BLOOM 7B (多言語)",
+            "mistralai/Mistral-7B-Instruct-v0.2": "Mistral 7B Instruct v0.2",
+            "microsoft/DialoGPT-medium": "DialoGPT Medium (対話特化)",
+            "HuggingFaceH4/zephyr-7b-beta": "Zephyr 7B Beta (対話特化)",
+            "NousResearch/Nous-Hermes-2-Yi-34B": "Nous Hermes 2 Yi 34B",
+            "upstage/SOLAR-10.7B-Instruct-v1.0": "SOLAR 10.7B Instruct"
         }
         
         # デフォルトモデル
@@ -85,12 +97,30 @@ class JapaneseLLMChat:
         for user_msg, bot_msg in history[-3:]:  # 直近3回の会話を含める
             conversation_context += f"ユーザー: {user_msg}\nアシスタント: {bot_msg}\n"
         
-        # プロンプトの構築
-        if self.current_model == "rinna/japanese-gpt-neox-3.6b-instruction-sft":
+        # プロンプトの構築（モデルに応じて最適化）
+        if "weblab" in self.current_model.lower() or "matsuo-lab" in self.current_model.lower():
+            # WebLab用の指示形式
+            prompt = f"以下は、タスクを説明する指示と、文脈のある入力の組み合わせです。要求を適切に満たす応答を書いてください。\n\n### 指示:\n日本語で自然な会話を行ってください。\n\n### 入力:\n{conversation_context}ユーザー: {message}\n\n### 応答:\n"
+        elif "rinna" in self.current_model.lower() and "instruction" in self.current_model.lower():
+            # Rinna指示チューニングモデル用
             prompt = f"{conversation_context}ユーザー: {message}\nアシスタント:"
+        elif "elyza" in self.current_model.lower() or "swallow" in self.current_model.lower():
+            # ELYZA/Swallow用の指示形式
+            prompt = f"以下は、タスクを説明する指示です。要求を適切に満たす応答を書きなさい。\n\n### 指示:\n{conversation_context}ユーザー: {message}\n\n### 応答:"
+        elif "mistral" in self.current_model.lower() or "zephyr" in self.current_model.lower():
+            # Mistral/Zephyr用の指示形式
+            prompt = f"<s>[INST] {conversation_context}ユーザー: {message} [/INST]"
+        elif "nous" in self.current_model.lower():
+            # Nous Hermes用の指示形式
+            prompt = f"### Instruction:\n{conversation_context}ユーザー: {message}\n\n### Response:"
+        elif "solar" in self.current_model.lower():
+            # SOLAR用の指示形式
+            prompt = f"### User:\n{conversation_context}ユーザー: {message}\n\n### Assistant:"
         elif "instruct" in self.current_model.lower():
+            # 一般的な指示チューニングモデル用
             prompt = f"以下は、タスクを説明する指示と、文脈のある入力の組み合わせです。要求を適切に満たす応答を書いてください。\n\n### 指示:\n日本語で自然な会話を行ってください。\n\n### 入力:\n{conversation_context}ユーザー: {message}\n\n### 応答:\n"
         else:
+            # デフォルト形式
             prompt = f"{conversation_context}ユーザー: {message}\nアシスタント:"
         
         # モデルから応答を取得
@@ -189,7 +219,9 @@ def create_interface():
                 
                 **注意**: 
                 - 初回使用時はモデルの読み込みに時間がかかる場合があります
-                - 大きなモデル（7B以上）の使用には有料アカウントが必要な場合があります
+                - 一部の大きなモデルの使用には有料アカウントが必要な場合があります
+                - Inference API非対応のモデル（Sarashina2-70B等）は含まれていません
+                - リストされたモデルはInference API対応を確認済みです
                 """
             )
         
