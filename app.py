@@ -16,14 +16,19 @@ class JapaneseLLMChat:
             "tokyotech-llm/Swallow-7b-instruct-hf": "Swallow 7B Instruct (日本語対応)",
             "elyza/ELYZA-japanese-Llama-2-7b-instruct": "ELYZA Japanese Llama 2 7B",
             
-            # 多言語対応・英語モデル（13B以上、Inference API対応）
+            # 多言語対応・英語モデル（Inference API対応）
             "microsoft/DialoGPT-large": "DialoGPT Large (対話特化)",
             "bigscience/bloom-7b1": "BLOOM 7B (多言語)",
             "mistralai/Mistral-7B-Instruct-v0.2": "Mistral 7B Instruct v0.2",
             "microsoft/DialoGPT-medium": "DialoGPT Medium (対話特化)",
             "HuggingFaceH4/zephyr-7b-beta": "Zephyr 7B Beta (対話特化)",
             "NousResearch/Nous-Hermes-2-Yi-34B": "Nous Hermes 2 Yi 34B",
-            "upstage/SOLAR-10.7B-Instruct-v1.0": "SOLAR 10.7B Instruct"
+            "upstage/SOLAR-10.7B-Instruct-v1.0": "SOLAR 10.7B Instruct",
+            
+            # 70Bクラス（PRO/Enterprise向け）
+            "meta-llama/Meta-Llama-3.1-70B-Instruct": "Llama 3.1 70B Instruct (PRO)",
+            "meta-llama/Llama-2-70b-chat-hf": "Llama 2 70B Chat (PRO)",
+            "meta-llama/Meta-Llama-3-70B-Instruct": "Llama 3 70B Instruct (PRO)"
         }
         
         # デフォルトモデル
@@ -107,6 +112,14 @@ class JapaneseLLMChat:
         elif "elyza" in self.current_model.lower() or "swallow" in self.current_model.lower():
             # ELYZA/Swallow用の指示形式
             prompt = f"以下は、タスクを説明する指示です。要求を適切に満たす応答を書きなさい。\n\n### 指示:\n{conversation_context}ユーザー: {message}\n\n### 応答:"
+        elif "llama" in self.current_model.lower() and ("chat" in self.current_model.lower() or "instruct" in self.current_model.lower()):
+            # Llama Chat/Instruct用の指示形式
+            if "llama-3" in self.current_model.lower():
+                # Llama 3シリーズ用
+                prompt = f"<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n{conversation_context}ユーザー: {message}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+            else:
+                # Llama 2シリーズ用
+                prompt = f"<s>[INST] {conversation_context}ユーザー: {message} [/INST]"
         elif "mistral" in self.current_model.lower() or "zephyr" in self.current_model.lower():
             # Mistral/Zephyr用の指示形式
             prompt = f"<s>[INST] {conversation_context}ユーザー: {message} [/INST]"
@@ -219,9 +232,10 @@ def create_interface():
                 
                 **注意**: 
                 - 初回使用時はモデルの読み込みに時間がかかる場合があります
-                - 一部の大きなモデルの使用には有料アカウントが必要な場合があります
+                - 70Bクラスのモデル（PRO表示）は HuggingFace PRO アカウントが必要です
                 - Inference API非対応のモデル（Sarashina2-70B等）は含まれていません
                 - リストされたモデルはInference API対応を確認済みです
+                - 70Bモデルは高いレート制限とコストがかかる場合があります
                 """
             )
         
